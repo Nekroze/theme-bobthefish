@@ -68,6 +68,41 @@ function __bobthefish_timestamp -S -d 'Show the current timestamp'
         or date $theme_date_format
 end
 
+function __bobthefish_telepresence -S -d 'Show the current telepresence state'
+    [ "$theme_display_telepresence" = 'no' ]
+    and return
+
+    type -q telepresence
+    or return
+
+    if not set -q $TELEPRESENCE_CONTAINER; and telepresence status | grep -q Running
+        set -f TELEPRESENCE_CONTAINER (telepresence list | grep intercepted | cut -d':' -f1)
+        [ -n "$TELEPRESENCE_CONTAINER" ] # Make sure that we got some output above, otherwise we would need to list & grep twice
+        or set -e TELEPRESENCE_CONTAINER
+    end
+
+    if set -q TELEPRESENCE_CONTAINER
+        set_color $fish_color_normal
+        set -q color_telepresence
+        and set_color $color_telepresence
+        or set_color yellow
+
+        echo -n ' '
+        echo -n "󱠾 $TELEPRESENCE_CONTAINER" # FIXME: this does not get hg_modified colour by default...
+        not set -q TELEPRESENCE_PORT_grpc
+        or echo -n "| $TELEPRESENCE_PORT_grpc"
+
+        not set -q TELEPRESENCE_PORT_openapi
+        or echo -n "|󰖟 $TELEPRESENCE_PORT_openapi"
+
+        set_color $fish_color_normal
+        set_color $fish_color_autosuggestion
+
+        [ "$theme_display_date" = 'no' ]
+        or echo -ns ' ' $__bobthefish_left_arrow_glyph
+    end
+end
+
 function fish_right_prompt -d 'bobthefish is all about the right prompt'
     set -l __bobthefish_left_arrow_glyph \uE0B3
     if [ "$theme_powerline_fonts" = "no" -a "$theme_nerd_fonts" != "yes" ]
@@ -77,6 +112,7 @@ function fish_right_prompt -d 'bobthefish is all about the right prompt'
     set_color $fish_color_autosuggestion
 
     __bobthefish_cmd_duration
+    __bobthefish_telepresence
     __bobthefish_timestamp
     set_color normal
 end
